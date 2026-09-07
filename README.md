@@ -34,25 +34,80 @@ Each CKAD domain maps to a change you make *here*:
 3. **Set the namespace first:** `kubectl config set-context --current --namespace=fiti`
 4. **Commit after every session** — at least one commit per day.
 
-## Run it locally
+## Run the app
+
+Each section starts from the repository root.
+
+### 1. Run locally with uv
+
+Install the locked dependencies and start the development server:
 
 ```bash
 cd app
 uv sync
 uv run uvicorn main:app --reload
-# open http://localhost:8000/docs
 ```
 
-## Deploy to kind
+Open <http://localhost:8000/docs>. Stop the server with `Ctrl+C`.
+
+### 2. Run in a container with Podman
+
+Build the image:
 
 ```bash
-docker build -t fiti-api:latest .
-kind load docker-image fiti-api:latest --name ckad
-kubectl apply -f k8s/
-kubectl -n fiti get all
-kubectl -n fiti port-forward svc/fiti-api 8080:80
-# open http://localhost:8080/docs
+podman build -t fiti-api:latest .
 ```
+
+Run the container:
+
+```bash
+podman run --rm --name fiti-api \
+  -p 8000:8000 \
+  -e APP_NAME=fiti \
+  -e APP_ENV=container \
+  -e API_KEY=local-test-key \
+  fiti-api:latest
+```
+
+Open <http://localhost:8000/docs> or check the health endpoint from another terminal:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Stop the container with `Ctrl+C`. Because it uses `--rm`, Podman removes it automatically.
+
+### 3. Deploy to Kubernetes with kind and Podman
+
+Tell kind to use Podman and create the local cluster. You only need to create the cluster once:
+
+```bash
+export KIND_EXPERIMENTAL_PROVIDER=podman
+kind create cluster --name ckad
+```
+
+Build the image if you have not already done so, then load it into kind:
+
+```bash
+podman build -t fiti-api:latest .
+kind load docker-image fiti-api:latest --name ckad
+```
+
+Deploy the Kubernetes resources and wait for the API to become ready:
+
+```bash
+kubectl apply -f k8s/
+kubectl -n fiti rollout status deployment/fiti-api
+kubectl -n fiti get all
+```
+
+Forward the Kubernetes service to your machine:
+
+```bash
+kubectl -n fiti port-forward svc/fiti-api 8080:80
+```
+
+Open <http://localhost:8080/docs>. Stop port forwarding with `Ctrl+C`.
 
 ## Endpoints
 
