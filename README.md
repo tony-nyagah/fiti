@@ -38,9 +38,8 @@ Each CKAD domain maps to a change you make *here*:
 
 ```bash
 cd app
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
+uv sync
+uv run uvicorn main:app --reload
 # open http://localhost:8000/docs
 ```
 

@@ -1,0 +1,9 @@
+[project]
+name = "fiti"
+version = "0.1.0"
+description = "A workout tracker that doubles as a CKAD lab"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+]
