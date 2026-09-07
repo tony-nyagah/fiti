@@ -48,48 +48,47 @@ uv sync
 uv run uvicorn main:app --reload
 ```
 
-Open <http://localhost:8000/docs>. Stop the server with `Ctrl+C`.
+Open <http://127.0.0.1:8000/docs>. Stop the server with `Ctrl+C`.
 
-### 2. Run in a container with Podman
+### 2. Run in a container with Docker
 
 Build the image:
 
 ```bash
-podman build -t fiti-api:latest .
+docker build -t fiti-api:latest .
 ```
 
 Run the container:
 
 ```bash
-podman run --rm --name fiti-api \
-  -p 8000:8000 \
+docker run --rm --name fiti-api \
+  -p 127.0.0.1:8000:8000 \
   -e APP_NAME=fiti \
   -e APP_ENV=container \
   -e API_KEY=local-test-key \
   fiti-api:latest
 ```
 
-Open <http://localhost:8000/docs> or check the health endpoint from another terminal:
+Open <http://127.0.0.1:8000/docs> or check the health endpoint from another terminal:
 
 ```bash
-curl http://localhost:8000/health
+curl http://127.0.0.1:8000/health
 ```
 
-Stop the container with `Ctrl+C`. Because it uses `--rm`, Podman removes it automatically.
+Stop the container with `Ctrl+C`. Because it uses `--rm`, Docker removes it automatically.
 
-### 3. Deploy to Kubernetes with kind and Podman
+### 3. Deploy to Kubernetes with kind and Docker
 
-Tell kind to use Podman and create the local cluster. You only need to create the cluster once:
+Tell kind to use Docker and create the local cluster. You only need to create the cluster once:
 
 ```bash
-export KIND_EXPERIMENTAL_PROVIDER=podman
 kind create cluster --name ckad
 ```
 
 Build the image if you have not already done so, then load it into kind:
 
 ```bash
-podman build -t fiti-api:latest .
+docker build -t fiti-api:latest .
 kind load docker-image fiti-api:latest --name ckad
 ```
 
@@ -107,7 +106,7 @@ Forward the Kubernetes service to your machine:
 kubectl -n fiti port-forward svc/fiti-api 8080:80
 ```
 
-Open <http://localhost:8080/docs>. Stop port forwarding with `Ctrl+C`.
+Open <http://127.0.0.1:8080/docs>. Stop port forwarding with `Ctrl+C`.
 
 ## Endpoints
 
