@@ -81,3 +81,34 @@ Deployment. `--restart=Never` is required for a true bare pod (exam trap).
 To see it: `kubectl run crashy --image=busybox --restart=Always -- sh -c "exit 1"`
 → pod name never changes, `RESTARTS` climbs (container restart). Delete a
 Deployment-managed pod → name changes (pod recreation).
+
+## Lesson 5 — Rolling updates and rollback
+
+`latest` is a moving pointer, not a version — two different images can both be
+"latest", so Kubernetes can't tell when the image changed. Use versioned tags
+(`fiti-api:v2`).
+
+`maxSurge` and `maxUnavailable` are one rule — "grow first, then shrink":
+
+- `maxSurge: 1` → at most 1 pod above the desired count (the "3").
+- `maxUnavailable: 0` → never below the desired count (the "2").
+
+With 2 replicas: `2 old → 3 → 2 → 3 → 2 new` — zero downtime.
+
+```bash
+docker build -t fiti-api:v2 .
+kind load docker-image fiti-api:v2 --name ckad
+kubectl set image deployment/fiti-api api=fiti-api:v2   # api = container name
+kubectl rollout status deployment/fiti-api
+kubectl rollout history deployment/fiti-api
+kubectl rollout undo deployment/fiti-api                # rollback
+```
+
+Gotchas:
+
+- `kubectl set image` changes the **live cluster**, not the YAML. Sync the YAML
+  after, or the next `kubectl apply` rolls back to whatever the file says.
+- The rollback was instant because the old image was still on the node under
+  `:latest` (and `imagePullPolicy: Never` skips pulls). If `:latest` had been
+  overwritten, the "rollback" would roll *forward*. Versioned tags make rollback
+  meaningful.
