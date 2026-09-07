@@ -7,7 +7,7 @@ APP_NAME = os.getenv("APP_NAME", "fiti")
 APP_ENV = os.getenv("APP_ENV", "dev")
 API_KEY_SET = bool(os.getenv("API_KEY"))
 
-app = FastAPI(title=APP_NAME, version="0.1.0")
+app = FastAPI(title=APP_NAME, version="0.2.0")
 
 
 class Exercise(BaseModel):
@@ -29,7 +29,7 @@ _counter = 0
 
 @app.get("/")
 def root():
-    return {"service": APP_NAME, "env": APP_ENV, "docs": "/docs"}
+    return {"service": APP_NAME, "env": APP_ENV, "docs": "/docs", "version": app.version}
 
 
 @app.get("/health")
