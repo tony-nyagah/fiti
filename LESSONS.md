@@ -43,7 +43,9 @@ The mental model that changes everything:
 - `kubectl apply -f k8s/` is **declarative** — "make the cluster *look like this*."
 
 I never say "start 2 containers." I declare a Deployment with 2 replicas, and a
-controller loop makes the cluster match — and rebuilds a Pod if one dies.
+controller loop makes the cluster match — and rebuilds a Pod if one dies. The
+chain: `Deployment → ReplicaSet → Pods`, with the **scheduler** deciding which
+node each Pod lands on (I never choose).
 
 Two things that make this work with `kind`:
 
@@ -51,8 +53,31 @@ Two things that make this work with `kind`:
   but kind's nodes run their own containerd and can't see it. `kind load
   docker-image` copies the image *into* the kind nodes. That's why the Deployment
   says `imagePullPolicy: Never` — "the image is already loaded, don't pull."
-- **Namespace discipline.** Set the context before every session, or you'll be
-  typing `-n fiti` forever: `kubectl config set-context --current --namespace=fiti`.
+- **Namespace discipline.** `kubectl config set-context --current --namespace=fiti`
+  only edits my local kubeconfig — it does **not** create the namespace. I still
+  have to `kubectl apply -f k8s/00-namespace.yaml` first. (Offline command vs
+  online command.)
 
-Payoff to verify: `/config` should report `api_key_loaded: true` — a Secret
-living in the cluster being injected into the Pod, with no change to the image.
+**Verified:** 2 pods running on `control-plane`; `/config` reports
+`api_key_loaded: true` — a Secret in the cluster injected into the Pod with no
+change to the image. Self-healing demo: `kubectl delete pod fiti-api-<name>` and
+the ReplicaSet spawned a replacement almost instantly. The pod name is
+`fiti-api-<rs-hash>-<pod-hash>` — after deletion the `rs-hash` stayed, the
+`pod-hash` changed. Deployment → ReplicaSet → Pod, right there in the name.
+
+## Lesson 4 — "Restart" means two different things
+
+The word "restart" is two mechanisms, and conflating them costs points:
+
+- **Container restart** (kubelet + `restartPolicy`): a *container* that crashes
+  is restarted in the same pod — same name, same IP, `RESTARTS` climbs.
+- **Pod recreation** (controller): a *pod* that's deleted is replaced by a new
+  one (new name, new IP) — but only because a Deployment/ReplicaSet is watching.
+
+A bare pod (`--restart=Never`) I delete is gone forever — nobody recreates it.
+And `kubectl run nginx --image=nginx` doesn't even make a bare pod; it makes a
+Deployment. `--restart=Never` is required for a true bare pod (exam trap).
+
+To see it: `kubectl run crashy --image=busybox --restart=Always -- sh -c "exit 1"`
+→ pod name never changes, `RESTARTS` climbs (container restart). Delete a
+Deployment-managed pod → name changes (pod recreation).
